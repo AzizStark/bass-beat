@@ -1,0 +1,4 @@
+numpy
+PyGObject
+pulsectl
+sounddevice

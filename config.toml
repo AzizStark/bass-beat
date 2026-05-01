@@ -1,0 +1,40 @@
+[display]
+fps = 140
+size = 0                           # 0 = native (900x900), or set max dimension in px
+transparent = true
+keep_below = true                  # stay behind other windows (desktop widget mode)
+
+[renderer]
+backend = "cairo"                  # "cairo" (CPU rendering) or "opengl" (GPU rendering via OpenGL 3.3)
+
+[visualizer]
+bars = 120
+bar_width = 4.5
+bar_height = 306
+radius = 144
+start_angle = 0
+end_angle = 360
+scale = 1.0
+smoothing = 3
+mirror = true
+invert_mirror = false
+min_bar_height = 0
+
+[colors]
+gradient = "210,228,255,255:0|239,33,177,255:50|222,231,254,255:100"
+# Rainbow alternative:
+# gradient = "255,0,0,255:0|255,255,0,255:16|0,255,0,255:33|0,255,255,255:50|0,0,255,255:67|255,0,255,255:84|255,0,0,255:100"
+
+[audio]
+fft_size = 8192
+fft_buffer_size = 16384
+fft_attack = 0
+fft_decay = 65
+freq_min = 22
+freq_max = 200
+sensitivity = 33
+bands = 60
+
+[image]
+path = "assets/default.png"        # center image (relative to install dir)
+scale_factor = 65                  # 0-100, controls how much the image overlaps bars

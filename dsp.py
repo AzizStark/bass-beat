@@ -23,6 +23,26 @@ def sens(n, lo, hi):
     return int(np.clip(d, lo, hi))
 
 
+_smoothing_cache = {}
+
+
+def _get_smoothing_indices(n, smoothing, mirror, invert_mirror):
+    key = (n, smoothing, mirror, invert_mirror)
+    if key in _smoothing_cache:
+        return _smoothing_cache[key]
+
+    audio_measures = n - 1
+    wrap_fn = asen if (not invert_mirror and mirror) else sens
+
+    idx_table = np.empty((n, smoothing * 2 + 1), dtype=np.int32)
+    for i in range(n):
+        for j, s in enumerate(range(-smoothing, smoothing + 1)):
+            idx_table[i, j] = wrap_fn(i + s, 0, audio_measures)
+
+    _smoothing_cache[key] = idx_table
+    return idx_table
+
+
 def apply_smoothing(raw_bands, smoothing=3, mirror=True, invert_mirror=False):
     """Applies the same smoothing kernel as generateVis.lua.
 
@@ -34,20 +54,11 @@ def apply_smoothing(raw_bands, smoothing=3, mirror=True, invert_mirror=False):
     if smoothing == 0:
         return raw_bands.copy()
 
-    audio_measures = n - 1
-    smoothed = np.zeros(n, dtype=np.float64)
+    idx = _get_smoothing_indices(n, smoothing, mirror, invert_mirror)
+    return raw_bands[idx].mean(axis=1)
 
-    for i in range(n):
-        total = 0.0
-        for s in range(-smoothing, smoothing + 1):
-            if not invert_mirror and mirror:
-                idx = asen(i + s, 0, audio_measures)
-            else:
-                idx = sens(i + s, 0, audio_measures)
-            total += raw_bands[idx]
-        smoothed[i] = total / (smoothing * 2 + 1)
 
-    return smoothed
+_mirror_cache = {}
 
 
 def build_mirrored_bar_values(smoothed_bands, num_bars=120, mirror=True, invert_mirror=False):
@@ -59,24 +70,22 @@ def build_mirrored_bar_values(smoothed_bands, num_bars=120, mirror=True, invert_
       bar i > audioMeasures  -> band (bands-1 - i), i.e. palindrome
     """
     num_bands = len(smoothed_bands)
-    bands_total = num_bars - 1
-    audio_measures = (num_bands - 1) if (num_bars % 2 == 0) else (num_bands // 2)
+    key = (num_bands, num_bars, mirror, invert_mirror)
 
-    bar_values = np.zeros(num_bars, dtype=np.float64)
+    if key not in _mirror_cache:
+        bands_total = num_bars - 1
+        audio_measures = (num_bands - 1) if (num_bars % 2 == 0) else (num_bands // 2)
 
-    for i in range(num_bars):
+        idx = np.arange(num_bars, dtype=np.int32)
         if mirror:
             if invert_mirror:
-                a = i if i <= audio_measures else i - audio_measures - 1
+                idx = np.where(idx <= audio_measures, idx, idx - audio_measures - 1)
             else:
-                a = i if i <= audio_measures else bands_total - i
-        else:
-            a = i
+                idx = np.where(idx <= audio_measures, idx, bands_total - idx)
 
-        a = int(np.clip(a, 0, num_bands - 1))
-        bar_values[i] = smoothed_bands[a]
+        _mirror_cache[key] = np.clip(idx, 0, num_bands - 1)
 
-    return bar_values
+    return smoothed_bands[_mirror_cache[key]]
 
 
 def parse_color(colorstring):

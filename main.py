@@ -2,17 +2,16 @@
 """BassBeat2 Linux -- Circular Audio Visualizer
 
 A precise port of the BassBeat2 Rainmeter skin.
-All FFT parameters, band mapping, smoothing, mirroring,
-gradient colors, and geometry are matched exactly.
 
 Usage:
-    python main.py [--no-transparent] [--size SIZE] [--fps FPS]
+    python main.py [--config PATH]
 
 Requires: numpy, sounddevice, PyGObject (gi), cairo
-On Ubuntu/Debian: sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0
+Optional: PyOpenGL (for hardware-accelerated rendering)
 """
 
 import sys
+import os
 import argparse
 import numpy as np
 
@@ -20,81 +19,131 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib
 
+from config import load_config
 from audio_capture import AudioCapture
 from dsp import (
     apply_smoothing, build_mirrored_bar_values,
-    compute_gradient_colors, DEFAULT_GCOLOR,
+    compute_gradient_colors,
 )
 from renderer import CircularVisualizer
 
-# --- Configuration matching Variables.inc exactly ---
-NUM_AUDIO_BANDS = 60
-NUM_BARS = 120
-BAR_WIDTH = 4.5
-BAR_HEIGHT = 306
-RADIUS = 144
-START_ANGLE = 0
-END_ANGLE = 360
-SCALE = 1.0
-SMOOTHING = 3
-MIRROR = True
-INVERT_MIRROR = False
-GCOLOR = DEFAULT_GCOLOR
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class VisualizerWindow(Gtk.Window):
-    def __init__(self, transparent=True, size=None, fps=60):
+    def __init__(self, cfg):
         super().__init__(title="BassBeat2")
 
-        self.bar_colors = compute_gradient_colors(GCOLOR, NUM_BARS)
+        disp = cfg["display"]
+        vis = cfg["visualizer"]
+        aud = cfg["audio"]
+        col = cfg["colors"]
+        img = cfg["image"]
+        rend = cfg["renderer"]
 
-        self.visualizer = CircularVisualizer(
-            bar_colors=self.bar_colors,
-            num_bars=NUM_BARS,
-            bar_width=BAR_WIDTH,
-            bar_height=BAR_HEIGHT,
-            radius=RADIUS,
-            start_angle=START_ANGLE,
-            end_angle=END_ANGLE,
-            scale=SCALE,
-        )
+        self._fps = disp["fps"]
+        self._smoothing = vis["smoothing"]
+        self._mirror = vis["mirror"]
+        self._invert_mirror = vis["invert_mirror"]
+        self._num_bars = vis["bars"]
+        self._backend = rend["backend"]
 
-        w, h = self.visualizer.get_widget_size()
-        if size is not None:
+        self.bar_colors = compute_gradient_colors(col["gradient"], self._num_bars)
+
+        image_path = img["path"]
+        if not os.path.isabs(image_path):
+            image_path = os.path.join(SCRIPT_DIR, image_path)
+
+        if self._backend == "opengl":
+            from renderer_gl import GLVisualizer, HAS_GL
+            if not HAS_GL:
+                print("OpenGL not available, falling back to cairo")
+                self._backend = "cairo"
+
+        if self._backend == "opengl":
+            from renderer_gl import GLVisualizer
+            self._gl_vis = GLVisualizer(
+                bar_colors=self.bar_colors,
+                num_bars=self._num_bars,
+                bar_width=vis["bar_width"],
+                bar_height=vis["bar_height"],
+                radius=vis["radius"],
+                start_angle=vis["start_angle"],
+                end_angle=vis["end_angle"],
+                scale=vis["scale"],
+                min_bar_height=vis["min_bar_height"],
+                image_path=image_path,
+                image_scale_factor=img["scale_factor"],
+            )
+            hw = self._gl_vis.halfwidth
+            w, h = self._gl_vis.get_widget_size()
+        else:
+            self._gl_vis = None
+            self._cairo_vis = CircularVisualizer(
+                bar_colors=self.bar_colors,
+                num_bars=self._num_bars,
+                bar_width=vis["bar_width"],
+                bar_height=vis["bar_height"],
+                radius=vis["radius"],
+                start_angle=vis["start_angle"],
+                end_angle=vis["end_angle"],
+                scale=vis["scale"],
+                min_bar_height=vis["min_bar_height"],
+                image_path=image_path,
+                image_scale_factor=img["scale_factor"],
+            )
+            w, h = self._cairo_vis.get_widget_size()
+
+        size = disp["size"]
+        if size and size > 0:
             scale_factor = size / max(w, h)
             w = int(w * scale_factor)
             h = int(h * scale_factor)
-        self._render_w = w
-        self._render_h = h
 
         self.set_default_size(w, h)
         self.set_resizable(False)
 
-        if transparent:
+        if disp["transparent"]:
             self.set_app_paintable(True)
             self.set_decorated(False)
             screen = self.get_screen()
             visual = screen.get_rgba_visual()
             if visual is not None:
                 self.set_visual(visual)
-            self.set_keep_below(True)
+            if disp["keep_below"]:
+                self.set_keep_below(True)
             self.stick()
 
-        self._drawing_area = Gtk.DrawingArea()
-        self._drawing_area.set_size_request(w, h)
-        self._drawing_area.connect('draw', self._on_draw)
-        self.add(self._drawing_area)
+        if self._backend == "opengl":
+            self._gl_area = Gtk.GLArea()
+            self._gl_area.set_required_version(3, 3)
+            self._gl_area.set_has_alpha(True)
+            self._gl_area.set_size_request(w, h)
+            self._gl_area.connect('render', self._on_gl_render)
+            self.add(self._gl_area)
+        else:
+            self._drawing_area = Gtk.DrawingArea()
+            self._drawing_area.set_size_request(w, h)
+            self._drawing_area.connect('draw', self._on_draw)
+            self.add(self._drawing_area)
 
         self.connect('destroy', self._on_destroy)
         self.connect('key-press-event', self._on_key_press)
-
         self._enable_drag()
 
-        self._audio = AudioCapture(num_bands=NUM_AUDIO_BANDS, fps=fps)
-        self._bar_values = np.zeros(NUM_BARS, dtype=np.float64)
+        self._audio = AudioCapture(
+            num_bands=aud["bands"],
+            fft_size=aud["fft_size"],
+            fft_buffer_size=aud["fft_buffer_size"],
+            freq_min=aud["freq_min"],
+            freq_max=aud["freq_max"],
+            sensitivity=aud["sensitivity"],
+            fft_attack=aud["fft_attack"],
+            fft_decay=aud["fft_decay"],
+            fps=self._fps,
+        )
+        self._bar_values = np.zeros(self._num_bars, dtype=np.float64)
         self._beat_value = 0.0
-
-        self._fps = fps
         self._timer_id = None
 
     def start(self):
@@ -107,21 +156,21 @@ class VisualizerWindow(Gtk.Window):
         raw_bands = self._audio.get_bands()
 
         smoothed = apply_smoothing(
-            raw_bands, smoothing=SMOOTHING,
-            mirror=MIRROR, invert_mirror=INVERT_MIRROR
+            raw_bands, smoothing=self._smoothing,
+            mirror=self._mirror, invert_mirror=self._invert_mirror,
         )
-
-        bar_values = build_mirrored_bar_values(
-            smoothed, num_bars=NUM_BARS,
-            mirror=MIRROR, invert_mirror=INVERT_MIRROR
+        self._bar_values = build_mirrored_bar_values(
+            smoothed, num_bars=self._num_bars,
+            mirror=self._mirror, invert_mirror=self._invert_mirror,
         )
-
-        self._bar_values = bar_values
 
         beat_band_idx = 26
         self._beat_value = raw_bands[beat_band_idx] if beat_band_idx < len(raw_bands) else 0.0
 
-        self._drawing_area.queue_draw()
+        if self._backend == "opengl":
+            self._gl_area.queue_draw()
+        else:
+            self._drawing_area.queue_draw()
         return True
 
     def _on_draw(self, widget, ctx):
@@ -130,16 +179,18 @@ class VisualizerWindow(Gtk.Window):
         ctx.set_operator(2)  # OVER
 
         alloc = widget.get_allocation()
-        vis_w, vis_h = self.visualizer.get_widget_size()
-
-        sx = alloc.width / vis_w
-        sy = alloc.height / vis_h
-        s = min(sx, sy)
-
+        vis_w, vis_h = self._cairo_vis.get_widget_size()
+        s = min(alloc.width / vis_w, alloc.height / vis_h)
         if s != 1.0:
             ctx.scale(s, s)
 
-        self.visualizer.render(ctx, self._bar_values, self._beat_value)
+        self._cairo_vis.render(ctx, self._bar_values, self._beat_value)
+
+    def _on_gl_render(self, area, ctx):
+        alloc = area.get_allocation()
+        self._gl_vis.render(alloc.width, alloc.height,
+                            self._bar_values, self._beat_value)
+        return True
 
     def _on_destroy(self, *args):
         self._audio.stop()
@@ -159,25 +210,25 @@ class VisualizerWindow(Gtk.Window):
         if event.button == 1:
             self.begin_move_drag(
                 event.button, int(event.x_root), int(event.y_root),
-                event.time
+                event.time,
             )
 
 
 def main():
     parser = argparse.ArgumentParser(description='BassBeat2 Linux Visualizer')
-    parser.add_argument('--no-transparent', action='store_true',
-                        help='Disable transparent background')
-    parser.add_argument('--size', type=int, default=None,
-                        help='Override widget size (max dimension in px)')
-    parser.add_argument('--fps', type=int, default=60,
-                        help='Target frames per second (default: 60)')
+    parser.add_argument('--config', type=str, default=None,
+                        help='Path to config.toml')
     args = parser.parse_args()
 
-    win = VisualizerWindow(
-        transparent=not args.no_transparent,
-        size=args.size,
-        fps=args.fps,
-    )
+    cfg = load_config(args.config)
+
+    print(f"BassBeat2: backend={cfg['renderer']['backend']}, "
+          f"fps={cfg['display']['fps']}, "
+          f"bars={cfg['visualizer']['bars']}, "
+          f"transparent={cfg['display']['transparent']}",
+          flush=True)
+
+    win = VisualizerWindow(cfg)
     win.start()
     Gtk.main()
 

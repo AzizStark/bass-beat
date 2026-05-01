@@ -2,3 +2,4 @@ numpy
 PyGObject
 pulsectl
 sounddevice
+PyOpenGL

@@ -210,15 +210,12 @@ class AudioCapture:
         scalar = 1.0 / math.sqrt(self.fft_size)
         new_fft = (fft_complex.real ** 2 + fft_complex.imag ** 2) * scalar
 
-        fft_len = len(new_fft)
-        for i in range(fft_len):
-            x0 = self._fft_out[i]
-            x1 = new_fft[i]
-            if x1 >= x0:
-                x0 = x1 + self._k_attack * (x0 - x1)
-            else:
-                x0 = x1 + self._k_decay * (x0 - x1)
-            self._fft_out[i] = x0
+        rising = new_fft >= self._fft_out
+        self._fft_out[:] = np.where(
+            rising,
+            new_fft + self._k_attack * (self._fft_out - new_fft),
+            new_fft + self._k_decay * (self._fft_out - new_fft),
+        )
 
         df = float(self.sample_rate) / self.fft_buffer_size
         band_scalar = 2.0 / float(self.sample_rate)
@@ -228,6 +225,7 @@ class AudioCapture:
         i_band = 0
         f0 = float(self.freq_min)
         half_bins = self.fft_buffer_size // 2
+        fft_len = len(self._fft_out)
 
         while i_bin <= half_bins and i_band < self.num_bands:
             f_lin1 = (i_bin + 0.5) * df
@@ -243,14 +241,9 @@ class AudioCapture:
                 f0 = f_log1
                 i_band += 1
 
-        sensitivity = self.sensitivity
-        for i in range(self.num_bands):
-            x = band_out[i]
-            x = max(0.0, min(1.0, x))
-            if x > 0.0:
-                x = max(0.0, 10.0 / sensitivity * math.log10(x) + 1.0)
-            else:
-                x = 0.0
-            self._bands[i] = x
+        band_out = np.clip(band_out, 0.0, 1.0)
+        mask = band_out > 0.0
+        band_out[mask] = np.maximum(0.0, 10.0 / self.sensitivity * np.log10(band_out[mask]) + 1.0)
+        self._bands[:] = band_out
 
         return self._bands.copy()

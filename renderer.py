@@ -18,7 +18,7 @@ class CircularVisualizer:
 
     def __init__(self, bar_colors, num_bars=120, bar_width=4.5, bar_height=306,
                  radius=144, start_angle=0, end_angle=360, scale=1.0,
-                 min_bar_height=0):
+                 min_bar_height=0, image_path=None, image_scale_factor=80):
         self.num_bars = num_bars
         self.bar_width = bar_width
         self.bar_height = bar_height
@@ -28,13 +28,14 @@ class CircularVisualizer:
         self.scale = scale
         self.min_bar_height = min_bar_height
         self.bar_colors = bar_colors
+        self.image_scale_factor = image_scale_factor
 
         self.halfwidth = (radius + bar_height) * scale
 
         self._precompute_bar_geometry()
 
         self._center_image = None
-        center_path = os.path.join(SCRIPT_DIR, "assets", "default.png")
+        center_path = image_path or os.path.join(SCRIPT_DIR, "assets", "default.png")
         if os.path.exists(center_path):
             self._center_image = cairo.ImageSurface.create_from_png(center_path)
 
@@ -105,7 +106,7 @@ class CircularVisualizer:
         img_w = self._center_image.get_width()
         img_h = self._center_image.get_height()
 
-        image_scale_offset = 2 * (0.005 * self.radius * 80)
+        image_scale_offset = 2 * (0.005 * self.radius * self.image_scale_factor)
         pulse_extra = beat_value * 3.6 * 40.0
         target_size = (self.radius * 2) + image_scale_offset + pulse_extra
 

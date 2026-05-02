@@ -65,10 +65,6 @@ class CircularVisualizer:
         return int(self.halfwidth * 2), int(self.halfwidth * 2)
 
     def render(self, ctx, bar_values, beat_value=0.0):
-        ctx.set_operator(cairo.OPERATOR_CLEAR)
-        ctx.paint()
-        ctx.set_operator(cairo.OPERATOR_OVER)
-
         self._draw_bars(ctx, bar_values)
         self._draw_center_image(ctx, beat_value)
 
@@ -82,15 +78,20 @@ class CircularVisualizer:
         rectangle = ctx.rectangle
         set_source_rgba = ctx.set_source_rgba
         fill = ctx.fill
+        save = ctx.save
+        restore = ctx.restore
         set_matrix = ctx.set_matrix
         base_matrix = ctx.get_matrix()
+        bx0, by0 = base_matrix.x0, base_matrix.y0
 
         for i in range(self.num_bars):
             bar_h = bar_values[i] * bh_scale
             if bar_h < 0.5:
                 continue
 
-            set_matrix(matrices[i])
+            m = matrices[i]
+            set_matrix(cairo.Matrix(m.xx, m.yx, m.xy, m.yy,
+                                    m.x0 + bx0, m.y0 + by0))
             rectangle(bx, -(r_sc + bar_h), bw, bar_h)
             set_source_rgba(*colors[i])
             fill()

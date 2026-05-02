@@ -5,7 +5,8 @@ transparent = true
 keep_below = true                  # stay behind other windows (desktop widget mode)
 fps_sync_decay = true              # adjust decay speed to match fps (keeps visual feel consistent across fps values)
 position = "center"                # "center", or "x,y" pixel coordinates (e.g. "100,200")
-draggable = true                   # allow dragging the window with left mouse button
+draggable = false                  # allow dragging the window with left mouse button
+sticky = true                      # show on all workspaces. false = only on the workspace where it was launched
 
 [renderer]
 backend = "cairo"                 # "cairo" (CPU rendering) or "opengl" (GPU rendering via OpenGL 3.3)
@@ -37,6 +38,7 @@ freq_min = 22
 freq_max = 200
 sensitivity = 33
 bands = 60
+latency = 128                      # PipeWire buffer in samples. 128=fast (recommended), 256=safe, 0=don't change. Below 128 may cause audio crackling system-wide
 
 [image]
 path = "assets/default.png"        # center image (relative to install dir)

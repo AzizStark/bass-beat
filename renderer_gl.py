@@ -163,15 +163,22 @@ class GLVisualizer:
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-    def render(self, width, height, bar_values, beat_value=0.0):
+    def render(self, width, height, bar_values, beat_value=0.0, offset_x=0, offset_y=0):
         self.init_gl()
 
-        glViewport(0, 0, width, height)
+        vis_w, vis_h = self.get_widget_size()
+
+        glScissor(0, 0, width, height)
+        glEnable(GL_SCISSOR_TEST)
         glClearColor(0.0, 0.0, 0.0, 0.0)
         glClear(GL_COLOR_BUFFER_BIT)
+        glDisable(GL_SCISSOR_TEST)
 
-        self._draw_bars_gl(width, height, bar_values)
-        self._draw_center_image_gl(width, height, beat_value)
+        gl_offset_y = height - vis_h - offset_y
+        glViewport(offset_x, gl_offset_y, vis_w, vis_h)
+
+        self._draw_bars_gl(vis_w, vis_h, bar_values)
+        self._draw_center_image_gl(vis_w, vis_h, beat_value)
 
     def _draw_bars_gl(self, vp_w, vp_h, bar_values):
         n = self.num_bars
@@ -275,9 +282,10 @@ class GLVisualizer:
 
         glUseProgram(self._tex_shader)
 
-        center_x = vp_w / 2.0
-        center_y = vp_h / 2.0
-        pixel_radius = (target_size / 2.0) * (min(vp_w, vp_h) / (hw * 2))
+        vp = glGetIntegerv(GL_VIEWPORT)
+        center_x = vp[0] + vp[2] / 2.0
+        center_y = vp[1] + vp[3] / 2.0
+        pixel_radius = target_size / 2.0
 
         loc_r = glGetUniformLocation(self._tex_shader, "uRadius")
         loc_c = glGetUniformLocation(self._tex_shader, "uCenter")

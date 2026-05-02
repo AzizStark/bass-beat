@@ -13,6 +13,7 @@ DEFAULTS = {
         "fps_sync_decay": True,
         "position": "center",
         "draggable": True,
+        "sticky": True,
     },
     "renderer": {
         "backend": "cairo",
@@ -42,6 +43,7 @@ DEFAULTS = {
         "freq_max": 200,
         "sensitivity": 33,
         "bands": 60,
+        "latency": 128,
     },
     "image": {
         "path": "assets/default.png",

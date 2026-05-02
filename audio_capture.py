@@ -124,11 +124,12 @@ class AudioCapture:
                  freq_min=FREQ_MIN, freq_max=FREQ_MAX,
                  sensitivity=SENSITIVITY,
                  fft_attack=FFT_ATTACK, fft_decay=FFT_DECAY,
-                 fps=60, fps_sync_decay=True):
+                 fps=60, fps_sync_decay=True, latency=128):
         self.num_bands = num_bands
         self.fft_size = fft_size
         self.fft_buffer_size = fft_buffer_size
         self.sample_rate = sample_rate
+        self._latency = latency
         self.freq_min = freq_min
         self.freq_max = freq_max
         self.sensitivity = sensitivity
@@ -155,6 +156,8 @@ class AudioCapture:
         self._monitor_name = _get_monitor_source_name()
 
     def start(self):
+        self._lower_audio_latency()
+
         if self._monitor_name:
             os.environ['PULSE_SOURCE'] = self._monitor_name
             print(f"Audio: PULSE_SOURCE={self._monitor_name}")
@@ -179,6 +182,22 @@ class AudioCapture:
             self._stream.stop()
             self._stream.close()
             self._stream = None
+
+    def _lower_audio_latency(self):
+        if self._latency <= 0:
+            return
+        import subprocess
+        import shutil
+        quantum = str(self._latency)
+        if shutil.which("pw-metadata"):
+            try:
+                subprocess.run(
+                    ["pw-metadata", "-n", "settings", "0", "clock.force-quantum", quantum],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2,
+                )
+                print(f"Audio: PipeWire quantum set to {quantum}")
+            except Exception:
+                pass
 
     def _audio_callback(self, indata, frames, time_info, status):
         if indata.shape[1] >= 2:

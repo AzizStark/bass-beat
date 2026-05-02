@@ -115,7 +115,8 @@ class VisualizerWindow(Gtk.Window):
                 self.set_visual(visual)
             if disp["keep_below"]:
                 self.set_keep_below(True)
-            self.stick()
+            if disp.get("sticky", True):
+                self.stick()
             if self._draggable:
                 self.set_type_hint(Gdk.WindowTypeHint.UTILITY)
             else:
@@ -151,6 +152,7 @@ class VisualizerWindow(Gtk.Window):
             fft_decay=aud["fft_decay"],
             fps=self._fps,
             fps_sync_decay=disp.get("fps_sync_decay", True),
+            latency=aud.get("latency", 128),
         )
         self._bar_values = np.zeros(self._num_bars, dtype=np.float64)
         self._beat_value = 0.0
@@ -253,16 +255,20 @@ class VisualizerWindow(Gtk.Window):
 
         alloc = widget.get_allocation()
         vis_w, vis_h = self._cairo_vis.get_widget_size()
-        s = min(alloc.width / vis_w, alloc.height / vis_h)
-        if s != 1.0:
-            ctx.scale(s, s)
+        ox = (alloc.width - vis_w) / 2.0
+        oy = (alloc.height - vis_h) / 2.0
+        ctx.translate(ox, oy)
 
         self._cairo_vis.render(ctx, self._bar_values, self._beat_value)
 
     def _on_gl_render(self, area, ctx):
         alloc = area.get_allocation()
+        vis_w, vis_h = self._gl_vis.get_widget_size()
+        ox = (alloc.width - vis_w) // 2
+        oy = (alloc.height - vis_h) // 2
         self._gl_vis.render(alloc.width, alloc.height,
-                            self._bar_values, self._beat_value)
+                            self._bar_values, self._beat_value,
+                            offset_x=ox, offset_y=oy)
         return True
 
     def _on_destroy(self, *args):

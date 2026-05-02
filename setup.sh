@@ -106,6 +106,10 @@ case "$1" in
         ;;
 esac
 
+if command -v pw-metadata &>/dev/null; then
+    pw-metadata -n settings 0 clock.force-quantum 128 &>/dev/null
+fi
+
 exec "$INSTALL_DIR/.venv/bin/python3" "$INSTALL_DIR/main.py" --config "$CONFIG" "$@" 2>/dev/null
 LAUNCHER
 chmod +x "$BIN_LINK"

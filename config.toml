@@ -1,11 +1,12 @@
 [display]
-fps = 140
+fps = 144
 size = 0                           # 0 = native (900x900), or set max dimension in px
 transparent = true
 keep_below = true                  # stay behind other windows (desktop widget mode)
+fps_sync_decay = true              # adjust decay speed to match fps (keeps visual feel consistent across fps values)
 
 [renderer]
-backend = "cairo"                  # "cairo" (CPU rendering) or "opengl" (GPU rendering via OpenGL 3.3)
+backend = "cairo"                 # "cairo" (CPU rendering) or "opengl" (GPU rendering via OpenGL 3.3)
 
 [visualizer]
 bars = 120
@@ -29,7 +30,7 @@ gradient = "210,228,255,255:0|239,33,177,255:50|222,231,254,255:100"
 fft_size = 8192
 fft_buffer_size = 16384
 fft_attack = 0
-fft_decay = 65
+fft_decay = 55
 freq_min = 22
 freq_max = 200
 sensitivity = 33

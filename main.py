@@ -33,6 +33,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 class VisualizerWindow(Gtk.Window):
     def __init__(self, cfg):
         super().__init__(title="BassBeat2")
+        self.set_wmclass("bassbeat", "BassBeat")
 
         disp = cfg["display"]
         vis = cfg["visualizer"]
@@ -113,6 +114,9 @@ class VisualizerWindow(Gtk.Window):
             if disp["keep_below"]:
                 self.set_keep_below(True)
             self.stick()
+            self.set_type_hint(Gdk.WindowTypeHint.DESKTOP)
+            self.set_skip_taskbar_hint(True)
+            self.set_skip_pager_hint(True)
 
         if self._backend == "opengl":
             self._gl_area = Gtk.GLArea()
@@ -141,6 +145,7 @@ class VisualizerWindow(Gtk.Window):
             fft_attack=aud["fft_attack"],
             fft_decay=aud["fft_decay"],
             fps=self._fps,
+            fps_sync_decay=disp.get("fps_sync_decay", True),
         )
         self._bar_values = np.zeros(self._num_bars, dtype=np.float64)
         self._beat_value = 0.0
@@ -151,6 +156,52 @@ class VisualizerWindow(Gtk.Window):
         interval_ms = max(1, int(1000 / self._fps))
         self._timer_id = GLib.timeout_add(interval_ms, self._tick)
         self.show_all()
+        self._disable_compositor_effects()
+
+    def _disable_compositor_effects(self):
+        try:
+            from ctypes import cdll, c_ulong, c_long, c_char_p, c_int, c_void_p, byref
+            xlib = cdll.LoadLibrary("libX11.so.6")
+            xlib.XOpenDisplay.restype = c_void_p
+            xlib.XOpenDisplay.argtypes = [c_char_p]
+            xlib.XInternAtom.restype = c_ulong
+            xlib.XInternAtom.argtypes = [c_void_p, c_char_p, c_int]
+            xlib.XChangeProperty.argtypes = [c_void_p, c_ulong, c_ulong, c_ulong,
+                                              c_int, c_int, c_void_p, c_int]
+            xlib.XFlush.argtypes = [c_void_p]
+            xlib.XCloseDisplay.argtypes = [c_void_p]
+
+            xid = self.get_window().get_xid()
+            dpy = xlib.XOpenDisplay(None)
+            if not dpy:
+                return
+
+            cardinal = xlib.XInternAtom(dpy, b"CARDINAL", 0)
+            for name in [b"_PICOM_SHADOW", b"_COMPTON_SHADOW", b"_KDE_NET_WM_SHADOW"]:
+                atom = xlib.XInternAtom(dpy, name, 0)
+                val = (c_ulong * 1)(0)
+                xlib.XChangeProperty(dpy, xid, atom, cardinal, 32, 0, byref(val), 1)
+
+            motif_atom = xlib.XInternAtom(dpy, b"_MOTIF_WM_HINTS", 0)
+            hints = (c_long * 5)(2, 0, 0, 0, 0)
+            xlib.XChangeProperty(dpy, xid, motif_atom, motif_atom, 32, 0, byref(hints), 5)
+
+            xlib.XFlush(dpy)
+            xlib.XCloseDisplay(dpy)
+        except Exception:
+            pass
+
+        self._print_compositor_hint()
+
+    @staticmethod
+    def _print_compositor_hint():
+        import shutil
+        if shutil.which("picom"):
+            print(
+                "NOTE: If you see a shadow/blur box, add this to your picom config's\n"
+                '      shadow=false rule:  "window_type = \'desktop\' || "',
+                flush=True,
+            )
 
     def _tick(self):
         raw_bands = self._audio.get_bands()

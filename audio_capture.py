@@ -91,26 +91,27 @@ def _compute_band_freqs(num_bands, freq_min, freq_max):
     return band_freq
 
 
-def _compute_fft_filter_constants(sample_rate, attack_ms, decay_ms, fps=62.5):
+def _compute_fft_filter_constants(sample_rate, attack_ms, decay_ms, fps=62.5, fps_sync=True):
     """Compute per-bin attack/decay filter constants matching AudioLevelBeta exactly.
 
     AudioLevelBeta formula (note the double 0.001):
       k = exp(log10(0.01) / (freq * 0.001 * envFFT * 0.001))
 
     That k is calibrated for Rainmeter's Update=16 (62.5 fps).
-    We rescale so the per-second decay rate is identical at any fps.
+    When fps_sync=True, rescale so the per-second decay rate is identical at any fps.
+    When fps_sync=False, use the raw k value (decay speed changes with fps).
     """
-    ref_fps = 62.5
-
     if attack_ms > 0:
-        k_ref = math.exp(math.log10(0.01) / (sample_rate * 0.001 * attack_ms * 0.001))
-        k_attack = k_ref ** (ref_fps / fps)
+        k_attack = math.exp(math.log10(0.01) / (sample_rate * 0.001 * attack_ms * 0.001))
+        if fps_sync:
+            k_attack = k_attack ** (62.5 / fps)
     else:
         k_attack = 0.0
 
     if decay_ms > 0:
-        k_ref = math.exp(math.log10(0.01) / (sample_rate * 0.001 * decay_ms * 0.001))
-        k_decay = k_ref ** (ref_fps / fps)
+        k_decay = math.exp(math.log10(0.01) / (sample_rate * 0.001 * decay_ms * 0.001))
+        if fps_sync:
+            k_decay = k_decay ** (62.5 / fps)
     else:
         k_decay = 0.0
 
@@ -124,7 +125,7 @@ class AudioCapture:
                  freq_min=FREQ_MIN, freq_max=FREQ_MAX,
                  sensitivity=SENSITIVITY,
                  fft_attack=FFT_ATTACK, fft_decay=FFT_DECAY,
-                 fps=60):
+                 fps=60, fps_sync_decay=True):
         self.num_bands = num_bands
         self.fft_size = fft_size
         self.fft_buffer_size = fft_buffer_size
@@ -144,7 +145,7 @@ class AudioCapture:
         self._band_freq = _compute_band_freqs(num_bands, freq_min, freq_max)
 
         self._k_attack, self._k_decay = _compute_fft_filter_constants(
-            sample_rate, fft_attack, fft_decay, fps
+            sample_rate, fft_attack, fft_decay, fps, fps_sync_decay
         )
 
         self._fft_out = np.zeros(fft_buffer_size // 2 + 1, dtype=np.float64)
@@ -163,7 +164,7 @@ class AudioCapture:
             device=None,
             channels=2,
             samplerate=self.sample_rate,
-            blocksize=1024,
+            blocksize=128,
             dtype='float32',
             callback=self._audio_callback,
         )

@@ -10,6 +10,7 @@ DEFAULTS = {
         "size": 0,
         "transparent": True,
         "keep_below": True,
+        "fps_sync_decay": True,
     },
     "renderer": {
         "backend": "cairo",

@@ -1,0 +1,33 @@
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CONFIG="$HOME/.config/bassbeat/config.toml"
+[ ! -f "$CONFIG" ] && CONFIG="$SCRIPT_DIR/config.toml"
+
+case "$1" in
+    --config)
+        cat "$CONFIG"
+        exit 0
+        ;;
+    --edit)
+        ${EDITOR:-${VISUAL:-xdg-open}} "$CONFIG"
+        exit 0
+        ;;
+    --config-path)
+        echo "$CONFIG"
+        exit 0
+        ;;
+    --help|-h)
+        echo "Usage: bassbeat [OPTIONS]"
+        echo ""
+        echo "Options:"
+        echo "  --config       Print current config"
+        echo "  --edit         Open config in editor"
+        echo "  --config-path  Print config file path"
+        echo "  --help         Show this help"
+        echo ""
+        echo "Config: $CONFIG"
+        exit 0
+        ;;
+esac
+
+exec "$SCRIPT_DIR/.venv/bin/python3" "$SCRIPT_DIR/main.py" --config "$CONFIG" "$@" 2>/dev/null

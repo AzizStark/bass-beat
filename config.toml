@@ -1,5 +1,5 @@
 [display]
-fps = 144
+fps = 120
 size = 0                           # 0 = native (900x900), or set max dimension in px
 transparent = true
 keep_below = true                  # stay behind other windows (desktop widget mode)

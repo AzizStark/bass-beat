@@ -2,8 +2,7 @@ import numpy as np
 
 
 def asen(n, lo, hi):
-    """Palindrome mirror wrap: 0 1 2 3 ... 59 59 ... 3 2 1 0
-    Matches Rainmeter's asen() used when InvertMirror=0 and Mirror=1."""
+    """Palindrome mirror wrap: 0 1 2 3 ... 59 59 ... 3 2 1 0"""
     d = n
     if d > hi:
         d = hi - (n - hi)
@@ -13,8 +12,7 @@ def asen(n, lo, hi):
 
 
 def sens(n, lo, hi):
-    """Circular wrap: 0 1 2 ... 59 0 1 2 ...
-    Matches Rainmeter's sens()."""
+    """Circular wrap: 0 1 2 ... 59 0 1 2 ..."""
     d = n
     if d > hi:
         d = n - hi
@@ -44,11 +42,10 @@ def _get_smoothing_indices(n, smoothing, mirror, invert_mirror):
 
 
 def apply_smoothing(raw_bands, smoothing=3, mirror=True, invert_mirror=False):
-    """Applies the same smoothing kernel as generateVis.lua.
+    """Applies spatial smoothing with edge wrapping.
 
-    With Smoothing=3 and 60 audio measures, each smoothed value is the
-    average of 7 neighbors (i-3 ... i+3), with edge wrapping via
-    asen() or sens() matching the Rainmeter config.
+    Each smoothed value is the average of (2*smoothing+1) neighbors
+    with edge wrapping via asen() or sens().
     """
     n = len(raw_bands)
     if smoothing == 0:
@@ -62,10 +59,9 @@ _mirror_cache = {}
 
 
 def build_mirrored_bar_values(smoothed_bands, num_bars=120, mirror=True, invert_mirror=False):
-    """Maps 60 smoothed audio bands to 120 visual bars with mirroring.
+    """Maps smoothed audio bands to visual bars with mirroring.
 
-    Matches generateVis.lua's bar generation loop exactly:
-    - Mirror=1, InvertMirror=0:
+    Mirror=True, InvertMirror=False:
       bar i <= audioMeasures -> band i
       bar i > audioMeasures  -> band (bands-1 - i), i.e. palindrome
     """
@@ -89,7 +85,7 @@ def build_mirrored_bar_values(smoothed_bands, num_bars=120, mirror=True, invert_
 
 
 def parse_color(colorstring):
-    """Parse Rainmeter color string 'R,G,B,A:Percent' or '#RRGGBB'."""
+    """Parse color string 'R,G,B,A:Percent' or '#RRGGBB'."""
     colorstring = colorstring.strip()
     if colorstring.startswith('#'):
         r = int(colorstring[1:3], 16)
@@ -124,7 +120,6 @@ def gradient_of(c1, c2, percent):
 def compute_gradient_colors(gcolor_string, num_bars):
     """Compute per-bar RGBA colors from the gradient string.
 
-    Matches GetGradients() from generateVis.lua exactly.
     GColor format: 'R,G,B,A:Pct|R,G,B,A:Pct|...'
     e.g. '210,228,255,255:0|239,33,177,255:50|222,231,254,255:100'
     """
@@ -159,6 +154,4 @@ def compute_gradient_colors(gcolor_string, num_bars):
 
     return bar_colors
 
-
-# Default gradient from Variables.inc
 DEFAULT_GCOLOR = "210,228,255,255:0|239,33,177,255:50|222,231,254,255:100"

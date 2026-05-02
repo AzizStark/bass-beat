@@ -11,6 +11,8 @@ DEFAULTS = {
         "transparent": True,
         "keep_below": True,
         "fps_sync_decay": True,
+        "position": "center",
+        "draggable": True,
     },
     "renderer": {
         "backend": "cairo",

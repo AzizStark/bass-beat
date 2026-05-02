@@ -4,6 +4,8 @@ size = 0                           # 0 = native (900x900), or set max dimension 
 transparent = true
 keep_below = true                  # stay behind other windows (desktop widget mode)
 fps_sync_decay = true              # adjust decay speed to match fps (keeps visual feel consistent across fps values)
+position = "center"                # "center", or "x,y" pixel coordinates (e.g. "100,200")
+draggable = true                   # allow dragging the window with left mouse button
 
 [renderer]
 backend = "cairo"                 # "cairo" (CPU rendering) or "opengl" (GPU rendering via OpenGL 3.3)

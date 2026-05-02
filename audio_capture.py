@@ -70,7 +70,7 @@ def _move_stream_to_monitor(monitor_name):
 
 
 def _build_hann_window_periodic(n):
-    """Periodic Hann window matching AudioLevelBeta exactly.
+    """Periodic Hann window.
 
     w[0] = 0.0
     w[i] = 0.5 * (1 - cos(2*pi*i / (N+1)))  for i = 1..N-1
@@ -82,7 +82,7 @@ def _build_hann_window_periodic(n):
 
 
 def _compute_band_freqs(num_bands, freq_min, freq_max):
-    """Logarithmic band center frequencies matching AudioLevelBeta exactly."""
+    """Logarithmic band center frequencies."""
     step = math.log(freq_max / freq_min) / num_bands / math.log(2.0)
     band_freq = np.zeros(num_bands, dtype=np.float64)
     band_freq[0] = freq_min * (2.0 ** (step / 2.0))
@@ -92,12 +92,11 @@ def _compute_band_freqs(num_bands, freq_min, freq_max):
 
 
 def _compute_fft_filter_constants(sample_rate, attack_ms, decay_ms, fps=62.5, fps_sync=True):
-    """Compute per-bin attack/decay filter constants matching AudioLevelBeta exactly.
+    """Compute per-bin attack/decay filter constants.
 
-    AudioLevelBeta formula (note the double 0.001):
-      k = exp(log10(0.01) / (freq * 0.001 * envFFT * 0.001))
+    k = exp(log10(0.01) / (freq * 0.001 * envFFT * 0.001))
 
-    That k is calibrated for Rainmeter's Update=16 (62.5 fps).
+    The base k is calibrated for 62.5 fps.
     When fps_sync=True, rescale so the per-second decay rate is identical at any fps.
     When fps_sync=False, use the raw k value (decay speed changes with fps).
     """

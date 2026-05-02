@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""BassBeat2 Linux -- Circular Audio Visualizer
-
-A precise port of the BassBeat2 Rainmeter skin.
+"""BassBeat -- Circular Audio Visualizer
 
 Usage:
     python main.py [--config PATH]
@@ -103,6 +101,10 @@ class VisualizerWindow(Gtk.Window):
 
         self.set_default_size(w, h)
         self.set_resizable(False)
+        self._win_w = w
+        self._win_h = h
+        self._position = disp.get("position", "center")
+        self._draggable = disp.get("draggable", True)
 
         if disp["transparent"]:
             self.set_app_paintable(True)
@@ -114,7 +116,10 @@ class VisualizerWindow(Gtk.Window):
             if disp["keep_below"]:
                 self.set_keep_below(True)
             self.stick()
-            self.set_type_hint(Gdk.WindowTypeHint.DESKTOP)
+            if self._draggable:
+                self.set_type_hint(Gdk.WindowTypeHint.UTILITY)
+            else:
+                self.set_type_hint(Gdk.WindowTypeHint.DESKTOP)
             self.set_skip_taskbar_hint(True)
             self.set_skip_pager_hint(True)
 
@@ -156,7 +161,24 @@ class VisualizerWindow(Gtk.Window):
         interval_ms = max(1, int(1000 / self._fps))
         self._timer_id = GLib.timeout_add(interval_ms, self._tick)
         self.show_all()
+        self._apply_position()
         self._disable_compositor_effects()
+
+    def _apply_position(self):
+        pos = self._position.strip().lower()
+        if pos == "center":
+            screen = self.get_screen()
+            monitor = screen.get_monitor_at_window(self.get_window())
+            geo = screen.get_monitor_geometry(monitor)
+            x = geo.x + (geo.width - self._win_w) // 2
+            y = geo.y + (geo.height - self._win_h) // 2
+            self.move(x, y)
+        elif "," in pos:
+            try:
+                x, y = pos.split(",", 1)
+                self.move(int(x.strip()), int(y.strip()))
+            except ValueError:
+                pass
 
     def _disable_compositor_effects(self):
         try:
@@ -258,7 +280,7 @@ class VisualizerWindow(Gtk.Window):
         self.connect('button-press-event', self._on_button_press)
 
     def _on_button_press(self, widget, event):
-        if event.button == 1:
+        if event.button == 1 and self._draggable:
             self.begin_move_drag(
                 event.button, int(event.x_root), int(event.y_root),
                 event.time,

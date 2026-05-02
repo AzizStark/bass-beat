@@ -80,6 +80,12 @@ INSTALL_DIR="$HOME/.local/share/bassbeat"
 CONFIG="$HOME/.config/bassbeat/config.toml"
 
 case "$1" in
+    --kill|--stop)
+        pkill -f "python3.*main.py.*bassbeat" 2>/dev/null
+        pkill -f "bassbeat" 2>/dev/null
+        echo "BassBeat stopped"
+        exit 0
+        ;;
     --config)
         cat "$CONFIG"
         exit 0
@@ -96,6 +102,7 @@ case "$1" in
         echo "Usage: bassbeat [OPTIONS]"
         echo ""
         echo "Options:"
+        echo "  --kill         Stop running instance"
         echo "  --config       Print current config"
         echo "  --edit         Open config in editor"
         echo "  --config-path  Print config file path"

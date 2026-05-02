@@ -14,6 +14,7 @@ DEFAULTS = {
         "position": "center",
         "draggable": True,
         "sticky": True,
+        "zoom": 1.0,
     },
     "renderer": {
         "backend": "cairo",

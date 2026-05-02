@@ -7,7 +7,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class CircularVisualizer:
-    """Renders the BassBeat2 circular visualizer using Cairo."""
+    """Renders the circular visualizer using Cairo."""
 
     def __init__(self, bar_colors, num_bars=120, bar_width=4.5, bar_height=306,
                  radius=144, start_angle=0, end_angle=360, scale=1.0,

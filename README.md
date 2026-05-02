@@ -62,6 +62,8 @@ draggable = true                   # left-click drag to reposition
 transparent = true
 keep_below = true                  # desktop widget mode
 fps_sync_decay = true              # consistent decay speed across fps values
+sticky = true                      # show on all workspaces
+zoom = 1.0                         # scale everything (1.5 = 50% bigger, 0.75 = smaller)
 
 [renderer]
 backend = "cairo"                  # "cairo" (CPU) or "opengl" (GPU, requires PyOpenGL)
@@ -92,6 +94,7 @@ freq_min = 22
 freq_max = 200
 sensitivity = 33
 bands = 60
+latency = 128                      # PipeWire buffer (128=fast, 256=safe, 0=don't change)
 
 [image]
 path = "assets/default.png"        # center image
@@ -150,9 +153,21 @@ cp ~/.config/autostart/bassbeat.desktop  # created by setup.sh
 | Use `backend = "cairo"` | More compatible, no OpenGL dependency needed |
 | Reduce `bars` (e.g. 60) | Fewer bars = fewer draw calls per frame |
 | Set `draggable = false` | Uses DESKTOP window type which some compositors render more efficiently |
-| Lower PipeWire quantum | `pw-metadata -n settings 0 clock.force-quantum 128` for lower audio latency (reset with value `0`) |
 
-Typical resource usage at 60fps with cairo backend: **~1-3% CPU**, **~45MB RAM**.
+### Audio latency
+
+BassBeat automatically lowers the PipeWire buffer size for responsive visuals. Configure with:
+
+```toml
+[audio]
+latency = 128    # recommended — fast response without audio issues
+latency = 256    # safer for weaker hardware
+latency = 0      # don't touch system audio settings
+```
+
+> **Warning:** Values below 128 may cause audio crackling in **all** apps (browser, games, players) since PipeWire quantum is system-wide. Below 64 requires a real-time audio kernel.
+
+Typical resource usage at 60fps with cairo: **~1-3% CPU**, **~45MB RAM**.
 
 ## Uninstall
 

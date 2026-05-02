@@ -8,7 +8,6 @@ Requires: numpy, sounddevice, PyGObject (gi), cairo
 Optional: PyOpenGL (for hardware-accelerated rendering)
 """
 
-import sys
 import os
 import argparse
 import numpy as np
@@ -30,7 +29,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class VisualizerWindow(Gtk.Window):
     def __init__(self, cfg):
-        super().__init__(title="BassBeat2")
+        super().__init__(title="BassBeat")
         self.set_wmclass("bassbeat", "BassBeat")
 
         disp = cfg["display"]
@@ -59,14 +58,19 @@ class VisualizerWindow(Gtk.Window):
                 print("OpenGL not available, falling back to cairo")
                 self._backend = "cairo"
 
+        zoom = disp.get("zoom", 1.0)
+        bar_width = vis["bar_width"] * zoom
+        bar_height = vis["bar_height"] * zoom
+        radius = vis["radius"] * zoom
+
         if self._backend == "opengl":
             from renderer_gl import GLVisualizer
             self._gl_vis = GLVisualizer(
                 bar_colors=self.bar_colors,
                 num_bars=self._num_bars,
-                bar_width=vis["bar_width"],
-                bar_height=vis["bar_height"],
-                radius=vis["radius"],
+                bar_width=bar_width,
+                bar_height=bar_height,
+                radius=radius,
                 start_angle=vis["start_angle"],
                 end_angle=vis["end_angle"],
                 scale=vis["scale"],
@@ -81,9 +85,9 @@ class VisualizerWindow(Gtk.Window):
             self._cairo_vis = CircularVisualizer(
                 bar_colors=self.bar_colors,
                 num_bars=self._num_bars,
-                bar_width=vis["bar_width"],
-                bar_height=vis["bar_height"],
-                radius=vis["radius"],
+                bar_width=bar_width,
+                bar_height=bar_height,
+                radius=radius,
                 start_angle=vis["start_angle"],
                 end_angle=vis["end_angle"],
                 scale=vis["scale"],
@@ -294,14 +298,14 @@ class VisualizerWindow(Gtk.Window):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='BassBeat2 Linux Visualizer')
+    parser = argparse.ArgumentParser(description='BassBeat Audio Visualizer')
     parser.add_argument('--config', type=str, default=None,
                         help='Path to config.toml')
     args = parser.parse_args()
 
     cfg = load_config(args.config)
 
-    print(f"BassBeat2: backend={cfg['renderer']['backend']}, "
+    print(f"BassBeat: backend={cfg['renderer']['backend']}, "
           f"fps={cfg['display']['fps']}, "
           f"bars={cfg['visualizer']['bars']}, "
           f"transparent={cfg['display']['transparent']}",

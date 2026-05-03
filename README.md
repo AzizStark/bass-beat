@@ -43,6 +43,7 @@ The setup script installs to `~/.local/share/bassbeat`, creates the config at `~
 
 ```
 bassbeat                 Run the visualizer
+bassbeat --kill          Stop running instance
 bassbeat --config        Print current config
 bassbeat --edit          Open config in your editor
 bassbeat --config-path   Print config file path

@@ -103,15 +103,9 @@ scale_factor = 80                  # 0-100, image overlap with bars
 
 ## Compositor notes
 
-BassBeat sets `_NET_WM_WINDOW_TYPE_DESKTOP` and compositor hint properties automatically. Works out of the box on most compositors.
+BassBeat sets `_NET_WM_WINDOW_TYPE_DESKTOP` and compositor hint properties automatically.
 
-| Compositor | Status |
-|------------|--------|
-| picom (legacy) | Works automatically |
-| picom v13+ | Add `"window_type = 'desktop' \|\| "` to your `shadow = false` rule |
-| mutter (GNOME) | Works automatically |
-| kwin (KDE) | Works automatically |
-| xfwm4 (Xfce) | Works automatically |
+**picom v13+** — add `"window_type = 'desktop' || "` to the `shadow = false` rule in your picom config.
 
 > **Note:** When `draggable = true`, the window uses `UTILITY` type to receive mouse input, which may show blur/shadow on some compositors. Set `draggable = false` once positioned for clean desktop mode.
 
@@ -167,7 +161,7 @@ latency = 0      # don't touch system audio settings
 
 > **Warning:** Values below 128 may cause audio crackling in **all** apps (browser, games, players) since PipeWire quantum is system-wide. Below 64 requires a real-time audio kernel.
 
-Typical resource usage at 60fps with cairo: **~1-3% CPU**, **~45MB RAM**.
+Typical resource usage at 60fps with cairo: **~1-3% CPU**, **~45MB RAM**. Results vary by hardware.
 
 ## Uninstall
 

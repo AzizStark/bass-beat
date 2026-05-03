@@ -6,8 +6,8 @@ keep_below = true                  # stay behind other windows (desktop widget m
 fps_sync_decay = true              # adjust decay speed to match fps (keeps visual feel consistent across fps values)
 position = "center"                # "center", or "x,y" pixel coordinates (e.g. "100,200")
 draggable = false                  # allow dragging the window with left mouse button
-sticky = true                      # show on all workspaces. false = only on the workspace where it was launched
-zoom = 1                       # uniform scale of the entire visualizer (e.g. 1.5 = 50% bigger, 0.75 = 25% smaller)
+sticky = true                      # show on all workspaces (only works when draggable=true, desktop mode(widget) is always sticky)
+zoom = 1                           # uniform scale of the entire visualizer (e.g. 1.5 = 50% bigger, 0.75 = 25% smaller)
 
 [renderer]
 backend = "cairo"                 # "cairo" (CPU rendering) or "opengl" (GPU rendering via OpenGL 3.3)

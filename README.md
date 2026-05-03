@@ -1,11 +1,10 @@
 # BassBeat
 
-> **⚠️ Beta** — This project is experimental. Expect rough edges, especially with compositor integration and audio device detection across different distros.
-
 A circular audio visualizer that reacts to your music in real-time. Runs natively on Linux as a desktop widget.
 
-![BassBeat](test_render.png)
+[![BassBeat](test_render.png)](https://github.com/user-attachments/assets/9ba6e0cb-d7df-4563-b77c-0d779f9483ba)
 
+> **⚠️ Beta** — This project is experimental. Expect rough edges, especially with compositor integration and audio device detection across different distros.
 ## Install
 
 Install system dependencies first, then run setup:
